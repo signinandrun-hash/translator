@@ -312,6 +312,7 @@
                 <div class="controls">
                     <button class="btn" id="copyBtn">📋 Copy</button>
                     <button class="btn secondary" id="clearBtn">🗑️ Clear</button>
+                    <button class="btn secondary" id="testBtn">🧪 Test Translation</button>
                 </div>
             </div>
 
@@ -383,47 +384,99 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             
-            recognition.continuous = true;
-            recognition.interimResults = true;
+            recognition.continuous = false; // Изменено на false для более надежной работы
+            recognition.interimResults = false;
             recognition.maxAlternatives = 1;
             
+            // Устанавливаем язык по умолчанию - английский, но распознает многие языки
+            recognition.lang = 'en-US';
+            
             recognition.onstart = () => {
+                console.log('Recognition started');
                 updateStatus('Listening...', 'listening');
             };
 
             recognition.onresult = async (event) => {
-                const last = event.results.length - 1;
-                const transcript = event.results[last][0].transcript;
-                const isFinal = event.results[last].isFinal;
-
-                if (isFinal && transcript.trim().length > 0) {
+                console.log('Recognition result received');
+                const result = event.results[0];
+                const transcript = result[0].transcript;
+                
+                console.log('Transcript:', transcript);
+                
+                if (transcript.trim().length > 0) {
                     updateStatus('Detecting language...', 'recognizing');
                     await processTranscript(transcript);
+                    
+                    // Автоматически перезапускаем если все еще в режиме прослушивания
+                    if (isListening) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.log('Recognition restart skipped:', e.message);
+                            }
+                        }, 100);
+                    }
                 }
             };
 
             recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
+                
                 if (event.error === 'no-speech') {
-                    updateStatus('No speech detected', 'ready');
+                    updateStatus('No speech detected, listening...', 'listening');
+                    // Перезапускаем если нет речи
+                    if (isListening) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.log('Recognition restart skipped:', e.message);
+                            }
+                        }, 100);
+                    }
                 } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
                     showError('Microphone access denied. Please allow microphone access and try again.');
                     stopListening();
                 } else if (event.error === 'network') {
-                    showError('Network error. Please check your internet connection.');
+                    showError('Network error in speech recognition. Check your connection.');
+                    if (isListening) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.log('Recognition restart skipped:', e.message);
+                            }
+                        }, 1000);
+                    }
+                } else if (event.error === 'aborted') {
+                    // Игнорируем aborted ошибки
+                    console.log('Recognition aborted, will restart');
                 } else {
-                    showError(`Recognition error: ${event.error}`);
+                    console.error(`Recognition error: ${event.error}`);
+                    if (isListening) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.log('Recognition restart skipped:', e.message);
+                            }
+                        }, 1000);
+                    }
                 }
             };
 
             recognition.onend = () => {
+                console.log('Recognition ended');
                 if (isListening) {
-                    try {
-                        recognition.start();
-                    } catch (error) {
-                        console.error('Error restarting recognition:', error);
-                        stopListening();
-                    }
+                    setTimeout(() => {
+                        try {
+                            recognition.start();
+                            console.log('Recognition restarted');
+                        } catch (error) {
+                            console.error('Error restarting recognition:', error);
+                        }
+                    }, 100);
                 }
             };
         }
@@ -503,36 +556,66 @@
 
         // Обработка распознанного текста
         async function processTranscript(transcript) {
+            console.log('Processing transcript:', transcript);
+            
             try {
                 const sourceLang = detectLanguage(transcript);
                 const targetLang = getTargetLanguage(sourceLang);
+                
+                console.log(`Detected language: ${sourceLang}, target: ${targetLang}`);
                 
                 updateStatus('Translating...', 'translating');
                 
                 const translation = await translateText(transcript, sourceLang, targetLang);
                 
+                console.log('Translation result:', translation);
+                
                 displayTranslation(translation, transcript, sourceLang, targetLang);
                 addToHistory(translation, transcript, sourceLang, targetLang);
                 
-                updateStatus('Ready!', 'ready');
+                updateStatus('Ready! Listening...', 'ready');
+                
+                // Небольшая пауза перед следующим распознаванием
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
             } catch (error) {
                 console.error('Translation error:', error);
-                showError('Translation error. Please check your internet connection.');
-                updateStatus('Error', 'ready');
+                showError('Translation failed. The service might be temporarily unavailable. Please try again.');
+                updateStatus('Error - Click to retry', 'ready');
             }
         }
 
-        // Перевод текста через LibreTranslate
+        // Перевод текста с использованием нескольких сервисов
         async function translateText(text, source, target) {
-            // Несколько бесплатных инстансов LibreTranslate
-            const apis = [
+            console.log(`Translating from ${source} to ${target}: "${text}"`);
+            
+            // Метод 1: MyMemory API (бесплатный, без ограничений)
+            try {
+                const response = await fetch(
+                    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.responseData && data.responseData.translatedText) {
+                        console.log('Translation successful (MyMemory)');
+                        return data.responseData.translatedText;
+                    }
+                }
+            } catch (error) {
+                console.error('MyMemory API error:', error);
+            }
+            
+            // Метод 2: LibreTranslate (несколько инстансов)
+            const libreApis = [
+                'https://libretranslate.com/translate',
                 'https://translate.terraprint.co/translate',
-                'https://libretranslate.de/translate',
-                'https://translate.argosopentech.com/translate'
+                'https://libretranslate.de/translate'
             ];
             
-            for (const apiUrl of apis) {
+            for (const apiUrl of libreApis) {
                 try {
+                    console.log(`Trying ${apiUrl}...`);
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: {
@@ -546,19 +629,38 @@
                         })
                     });
 
-                    if (!response.ok) {
-                        continue; // Пробуем следующий API
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.translatedText) {
+                            console.log(`Translation successful (${apiUrl})`);
+                            return data.translatedText;
+                        }
                     }
-
-                    const data = await response.json();
-                    return data.translatedText;
                 } catch (error) {
                     console.error(`Error with ${apiUrl}:`, error);
-                    continue;
                 }
             }
             
-            throw new Error('All translation APIs failed');
+            // Метод 3: Lingva Translate API
+            try {
+                console.log('Trying Lingva Translate...');
+                const response = await fetch(
+                    `https://lingva.ml/api/v1/${source}/${target}/${encodeURIComponent(text)}`
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.translation) {
+                        console.log('Translation successful (Lingva)');
+                        return data.translation;
+                    }
+                }
+            } catch (error) {
+                console.error('Lingva API error:', error);
+            }
+            
+            // Если все методы не сработали
+            throw new Error('All translation services are unavailable');
         }
 
         // Отображение перевода
@@ -714,6 +816,29 @@
             originalText.textContent = '';
             errorDiv.classList.remove('visible');
         });
+
+        // Кнопка тестирования перевода
+        const testBtn = document.getElementById('testBtn');
+        if (testBtn) {
+            testBtn.addEventListener('click', async () => {
+                const testText = 'Hello, how are you?';
+                testBtn.textContent = '⏳ Testing...';
+                testBtn.disabled = true;
+                
+                try {
+                    await processTranscript(testText);
+                    testBtn.textContent = '✓ Test Passed';
+                } catch (error) {
+                    testBtn.textContent = '✗ Test Failed';
+                    showError('Test failed: ' + error.message);
+                } finally {
+                    setTimeout(() => {
+                        testBtn.textContent = '🧪 Test Translation';
+                        testBtn.disabled = false;
+                    }, 2000);
+                }
+            });
+        }
 
         // Загрузка истории из localStorage
         window.addEventListener('load', () => {
