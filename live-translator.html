@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Translator EN ⇄ RU ⇄ DE ⇄ UK</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .mic-button {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mic-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        .mic-button.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            }
+            50% {
+                box-shadow: 0 10px 40px rgba(245, 87, 108, 0.6);
+            }
+        }
+
+        .mic-icon {
+            font-size: 60px;
+            transition: all 0.3s ease;
+        }
+
+        .mic-button.active .mic-icon {
+            color: white;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .status.listening { color: #f5576c; }
+        .status.recognizing { color: #667eea; }
+        .status.translating { color: #764ba2; }
+        .status.ready { color: #4caf50; }
+
+        .translation-display {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 800px;
+            min-height: 200px;
+            display: none;
+        }
+
+        .translation-display.visible {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .translation-text {
+            font-size: 1.8rem;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 15px;
+            word-wrap: break-word;
+        }
+
+        .original-text {
+            font-size: 1rem;
+            color: #999;
+            font-style: italic;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .history {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 30px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .history h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-item .time {
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .history-item .text {
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        .history-item .original {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .error {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.visible {
+            display: block;
+        }
+
+        .language-indicator {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .language-indicator.de {
+            background: #ffecb3;
+            color: #f57c00;
+        }
+
+        .language-indicator.uk {
+            background: #c5e1a5;
+            color: #558b2f;
+        }
+
+        .language-indicator.en {
+            background: #b3e5fc;
+            color: #0277bd;
+        }
+
+        .language-indicator.ru {
+            background: #f8bbd0;
+            color: #c2185b;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .mic-button {
+                width: 120px;
+                height: 120px;
+            }
+
+            .mic-icon {
+                font-size: 50px;
+            }
+
+            .translation-text {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Live Translator</h1>
+            <p>English ⇄ Russian ⇄ German ⇄ Ukrainian</p>
+        </div>
+
+        <div class="main-section">
+            <button class="mic-button" id="micButton">
+                <div class="mic-icon">🎤</div>
+            </button>
+
+            <div class="status" id="status">Click to start</div>
+
+            <div class="translation-display" id="translationDisplay">
+                <div class="language-indicator" id="languageIndicator"></div>
+                <div class="translation-text" id="translationText"></div>
+                <div class="original-text" id="originalText"></div>
+                <div class="controls">
+                    <button class="btn" id="copyBtn">📋 Copy</button>
+                    <button class="btn secondary" id="clearBtn">🗑️ Clear</button>
+                </div>
+            </div>
+
+            <div class="error" id="error"></div>
+        </div>
+
+        <div class="history" id="history" style="display: none;">
+            <h3>📜 Translation History</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Глобальные перемены
+        let recognition = null;
+        let isListening = false;
+        let translationHistory = [];
+        const MAX_HISTORY = 10;
+        let microphoneAccess = false;
+
+        // Элементы DOM
+        const micButton = document.getElementById('micButton');
+        const status = document.getElementById('status');
+        const translationDisplay = document.getElementById('translationDisplay');
+        const translationText = document.getElementById('translationText');
+        const originalText = document.getElementById('originalText');
+        const languageIndicator = document.getElementById('languageIndicator');
+        const copyBtn = document.getElementById('copyBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const errorDiv = document.getElementById('error');
+        const history = document.getElementById('history');
+        const historyList = document.getElementById('historyList');
+
+        // Проверка поддержки Web Speech API
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            showError('Your browser does not support speech recognition. Please use Chrome, Edge, or Safari.');
+        } else {
+            checkMicrophoneAccess();
+        }
+
+        // Проверка доступа к микрофону
+        async function checkMicrophoneAccess() {
+            try {
+                // Запрашиваем доступ к микрофону
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Останавливаем stream после получения доступа
+                stream.getTracks().forEach(track => track.stop());
+                
+                microphoneAccess = true;
+                initializeSpeechRecognition();
+                updateStatus('Click to start', 'ready');
+            } catch (error) {
+                console.error('Microphone access error:', error);
+                microphoneAccess = false;
+                
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    showError('Microphone access denied. Please allow microphone access in your browser settings and reload the page.');
+                } else if (error.name === 'NotFoundError') {
+                    showError('No microphone found. Please connect a microphone and reload the page.');
+                } else {
+                    showError('Unable to access microphone: ' + error.message);
+                }
+            }
+        }
+
+        // Инициализация распознавания речи
+        function initializeSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+            
+            recognition.onstart = () => {
+                updateStatus('Listening...', 'listening');
+            };
+
+            recognition.onresult = async (event) => {
+                const last = event.results.length - 1;
+                const transcript = event.results[last][0].transcript;
+                const isFinal = event.results[last].isFinal;
+
+                if (isFinal && transcript.trim().length > 0) {
+                    updateStatus('Detecting language...', 'recognizing');
+                    await processTranscript(transcript);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (event.error === 'no-speech') {
+                    updateStatus('No speech detected', 'ready');
+                } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    showError('Microphone access denied. Please allow microphone access and try again.');
+                    stopListening();
+                } else if (event.error === 'network') {
+                    showError('Network error. Please check your internet connection.');
+                } else {
+                    showError(`Recognition error: ${event.error}`);
+                }
+            };
+
+            recognition.onend = () => {
+                if (isListening) {
+                    try {
+                        recognition.start();
+                    } catch (error) {
+                        console.error('Error restarting recognition:', error);
+                        stopListening();
+                    }
+                }
+            };
+        }
+
+        // Определение языка текста (поддерживает EN, RU, DE, UK)
+        function detectLanguage(text) {
+            const textLower = text.toLowerCase();
+            
+            // Характерные буквы для каждого языка
+            const ukrainianChars = /[іїєґ]/i;
+            const russianChars = /[ыъэё]/i;
+            const germanChars = /[äöüß]/i;
+            
+            // Подсчет характерных букв
+            const ukScore = (text.match(/[іїєґ]/gi) || []).length;
+            const ruScore = (text.match(/[ыъэё]/gi) || []).length;
+            const deScore = (text.match(/[äöüß]/gi) || []).length;
+            
+            // Проверяем наличие кириллицы
+            const hasCyrillic = /[а-яА-ЯіїєґыъэёІЇЄҐЫЪЭЁ]/.test(text);
+            const hasLatin = /[a-zA-Z]/.test(text);
+            
+            // Если есть украинские уникальные буквы - это украинский
+            if (ukrainianChars.test(text)) {
+                return 'uk';
+            }
+            
+            // Если есть русские уникальные буквы - это русский
+            if (russianChars.test(text)) {
+                return 'ru';
+            }
+            
+            // Если есть немецкие умлауты - это немецкий
+            if (germanChars.test(text)) {
+                return 'de';
+            }
+            
+            // Если есть кириллица но нет уникальных букв - скорее всего русский
+            if (hasCyrillic && !hasLatin) {
+                return 'ru';
+            }
+            
+            // Если только латиница - проверяем частотные слова
+            if (hasLatin && !hasCyrillic) {
+                // Немецкие частотные слова
+                const germanWords = /\b(der|die|das|und|ist|von|den|dem|ein|eine|nicht|mit|sich|auf|für|als)\b/i;
+                // Английские частотные слова
+                const englishWords = /\b(the|is|are|was|were|have|has|had|will|would|can|could|should|this|that|these|those)\b/i;
+                
+                if (germanWords.test(text)) {
+                    return 'de';
+                }
+                if (englishWords.test(text)) {
+                    return 'en';
+                }
+                
+                // По умолчанию для латиницы - английский
+                return 'en';
+            }
+            
+            // По умолчанию
+            return 'en';
+        }
+
+        // Определение целевого языка для перевода
+        function getTargetLanguage(sourceLang) {
+            // Логика переключения: EN ↔ RU, DE ↔ UK, но также можно переводить между любыми парами
+            const languagePairs = {
+                'en': 'ru',
+                'ru': 'en',
+                'de': 'uk',
+                'uk': 'de'
+            };
+            
+            return languagePairs[sourceLang] || 'en';
+        }
+
+        // Обработка распознанного текста
+        async function processTranscript(transcript) {
+            try {
+                const sourceLang = detectLanguage(transcript);
+                const targetLang = getTargetLanguage(sourceLang);
+                
+                updateStatus('Translating...', 'translating');
+                
+                const translation = await translateText(transcript, sourceLang, targetLang);
+                
+                displayTranslation(translation, transcript, sourceLang, targetLang);
+                addToHistory(translation, transcript, sourceLang, targetLang);
+                
+                updateStatus('Ready!', 'ready');
+            } catch (error) {
+                console.error('Translation error:', error);
+                showError('Translation error. Please check your internet connection.');
+                updateStatus('Error', 'ready');
+            }
+        }
+
+        // Перевод текста через LibreTranslate
+        async function translateText(text, source, target) {
+            // Несколько бесплатных инстансов LibreTranslate
+            const apis = [
+                'https://translate.terraprint.co/translate',
+                'https://libretranslate.de/translate',
+                'https://translate.argosopentech.com/translate'
+            ];
+            
+            for (const apiUrl of apis) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            q: text,
+                            source: source,
+                            target: target,
+                            format: 'text'
+                        })
+                    });
+
+                    if (!response.ok) {
+                        continue; // Пробуем следующий API
+                    }
+
+                    const data = await response.json();
+                    return data.translatedText;
+                } catch (error) {
+                    console.error(`Error with ${apiUrl}:`, error);
+                    continue;
+                }
+            }
+            
+            throw new Error('All translation APIs failed');
+        }
+
+        // Отображение перевода
+        function displayTranslation(translation, original, sourceLang, targetLang) {
+            translationText.textContent = translation;
+            originalText.textContent = `Original: ${original}`;
+            
+            const langNames = {
+                'en': 'EN',
+                'ru': 'RU',
+                'de': 'DE',
+                'uk': 'UK'
+            };
+            
+            const langName = `${langNames[sourceLang]} → ${langNames[targetLang]}`;
+            languageIndicator.textContent = langName;
+            languageIndicator.className = `language-indicator ${sourceLang}`;
+            
+            translationDisplay.classList.add('visible');
+            errorDiv.classList.remove('visible');
+        }
+
+        // Добавление в историю
+        function addToHistory(translation, original, sourceLang, targetLang) {
+            const item = {
+                translation,
+                original,
+                sourceLang,
+                targetLang,
+                timestamp: new Date()
+            };
+            
+            translationHistory.unshift(item);
+            
+            if (translationHistory.length > MAX_HISTORY) {
+                translationHistory.pop();
+            }
+            
+            updateHistoryDisplay();
+        }
+
+        // Обновление отображения истории
+        function updateHistoryDisplay() {
+            if (translationHistory.length === 0) {
+                history.style.display = 'none';
+                return;
+            }
+            
+            history.style.display = 'block';
+            historyList.innerHTML = '';
+            
+            const langNames = {
+                'en': 'EN',
+                'ru': 'RU',
+                'de': 'DE',
+                'uk': 'UK'
+            };
+            
+            translationHistory.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                
+                const time = item.timestamp.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const langLabel = `${langNames[item.sourceLang]} → ${langNames[item.targetLang]}`;
+                
+                div.innerHTML = `
+                    <div class="time">${time} | ${langLabel}</div>
+                    <div class="text">${item.translation}</div>
+                    <div class="original">${item.original}</div>
+                `;
+                
+                historyList.appendChild(div);
+            });
+        }
+
+        // Обновление статуса
+        function updateStatus(text, statusClass) {
+            status.textContent = text;
+            status.className = `status ${statusClass}`;
+        }
+
+        // Показать ошибку
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.classList.add('visible');
+        }
+
+        // Начать/остановить прослушивание
+        function toggleListening() {
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+
+        function startListening() {
+            if (!microphoneAccess) {
+                showError('Microphone access is required. Please reload the page and allow access.');
+                return;
+            }
+            
+            if (!recognition) {
+                showError('Speech recognition is not available');
+                return;
+            }
+            
+            try {
+                // Устанавливаем язык распознавания (можно менять динамически)
+                recognition.lang = 'en-US';
+                recognition.start();
+                isListening = true;
+                micButton.classList.add('active');
+                errorDiv.classList.remove('visible');
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                showError('Failed to start speech recognition. Please try again.');
+            }
+        }
+
+        function stopListening() {
+            if (recognition) {
+                recognition.stop();
+            }
+            isListening = false;
+            micButton.classList.remove('active');
+            updateStatus('Click to start', 'ready');
+        }
+
+        // Обработчики событий
+        micButton.addEventListener('click', toggleListening);
+
+        copyBtn.addEventListener('click', () => {
+            const text = translationText.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.textContent = '✓ Copied';
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showError('Failed to copy to clipboard');
+            });
+        });
+
+        clearBtn.addEventListener('click', () => {
+            translationDisplay.classList.remove('visible');
+            translationText.textContent = '';
+            originalText.textContent = '';
+            errorDiv.classList.remove('visible');
+        });
+
+        // Загрузка истории из localStorage
+        window.addEventListener('load', () => {
+            const saved = localStorage.getItem('translationHistory');
+            if (saved) {
+                try {
+                    translationHistory = JSON.parse(saved).map(item => ({
+                        ...item,
+                        timestamp: new Date(item.timestamp)
+                    }));
+                    updateHistoryDisplay();
+                } catch (error) {
+                    console.error('Error loading history:', error);
+                }
+            }
+        });
+
+        // Сохранение истории в localStorage
+        window.addEventListener('beforeunload', () => {
+            localStorage.setItem('translationHistory', JSON.stringify(translationHistory));
+        });
+    </script>
+</body>
+</html>
