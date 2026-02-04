@@ -48,29 +48,81 @@
             margin-bottom: 20px;
         }
 
-        .language-selector {
+        .language-controls {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
             margin-top: 20px;
         }
 
-        .language-selector select {
-            padding: 12px 24px;
-            font-size: 1rem;
-            border: none;
-            border-radius: 25px;
-            background: white;
-            color: #333;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            outline: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
+        .language-pair-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
         }
 
-        .language-selector select:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.3);
+        .language-pair {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 10px 20px;
+            background: white;
+            border-radius: 10px;
+            font-weight: 600;
+            color: #333;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .language-arrow {
+            font-size: 1.5rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .language-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .lang-btn {
+            padding: 8px 16px;
+            border: 2px solid white;
+            border-radius: 20px;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .lang-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .lang-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+        }
+
+        .detected-language {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         .main-section {
@@ -157,6 +209,17 @@
         .conversation-container.visible {
             display: block;
             animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .conversation-header {
@@ -311,9 +374,14 @@
             .mic-icon {
                 font-size: 50px;
             }
-
-            .translation-text {
-                font-size: 1.4rem;
+            
+            .language-pair-selector {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .language-arrow {
+                transform: rotate(90deg);
             }
         }
     </style>
@@ -323,13 +391,26 @@
         <div class="header">
             <h1>🎤 Live Translator</h1>
             <p>Real-time Speech Translation</p>
-            <div class="language-selector">
-                <select id="langPairSelect">
-                    <option value="ru-de">🇷🇺 Russian ⇄ 🇩🇪 German</option>
-                    <option value="uk-de">🇺🇦 Ukrainian ⇄ 🇩🇪 German</option>
-                    <option value="ru-en">🇷🇺 Russian ⇄ 🇬🇧 English</option>
-                    <option value="uk-en">🇺🇦 Ukrainian ⇄ 🇬🇧 English</option>
-                </select>
+            
+            <div class="language-controls">
+                <div class="language-pair-selector">
+                    <div class="language-pair">
+                        <span id="lang1Display">🇷🇺 RU</span>
+                        <div class="language-arrow">⇄</div>
+                        <span id="lang2Display">🇩🇪 DE</span>
+                    </div>
+                </div>
+                
+                <div class="language-buttons">
+                    <button class="lang-btn active" data-lang1="ru" data-lang2="de">🇷🇺 ⇄ 🇩🇪</button>
+                    <button class="lang-btn" data-lang1="uk" data-lang2="de">🇺🇦 ⇄ 🇩🇪</button>
+                    <button class="lang-btn" data-lang1="ru" data-lang2="en">🇷🇺 ⇄ 🇬🇧</button>
+                    <button class="lang-btn" data-lang1="uk" data-lang2="en">🇺🇦 ⇄ 🇬🇧</button>
+                </div>
+                
+                <div class="detected-language" id="detectedLanguage">
+                    <span>🎯 Детектор языка: Автоматический</span>
+                </div>
             </div>
         </div>
 
@@ -338,27 +419,29 @@
                 <div class="mic-icon">🎤</div>
             </button>
 
-            <div class="status" id="status">Click to start</div>
+            <div class="status" id="status">Нажмите микрофон для начала</div>
 
             <div class="error" id="error"></div>
         </div>
 
         <div class="conversation-container" id="conversationContainer">
             <div class="conversation-header">
-                <h3>💬 Conversation</h3>
-                <button class="btn secondary" id="clearConversationBtn">🗑️ Clear All</button>
+                <h3>💬 Диалог</h3>
+                <button class="btn secondary" id="clearConversationBtn">🗑️ Очистить все</button>
             </div>
             <div class="conversation-list" id="conversationList"></div>
         </div>
     </div>
 
     <script>
-        // Глобальные перемены
+        // Глобальные переменные
         let recognition = null;
         let isListening = false;
         let conversationHistory = [];
         let microphoneAccess = false;
-        let selectedLangPair = { lang1: 'ru', lang2: 'de' }; // По умолчанию RU-DE
+        let selectedLangPair = { lang1: 'ru', lang2: 'de' };
+        let lastDetectedLang = null;
+        let recognitionLanguages = [];
 
         // Элементы DOM
         const micButton = document.getElementById('micButton');
@@ -366,12 +449,47 @@
         const errorDiv = document.getElementById('error');
         const conversationContainer = document.getElementById('conversationContainer');
         const conversationList = document.getElementById('conversationList');
-        const langPairSelect = document.getElementById('langPairSelect');
         const clearConversationBtn = document.getElementById('clearConversationBtn');
+        const lang1Display = document.getElementById('lang1Display');
+        const lang2Display = document.getElementById('lang2Display');
+        const detectedLanguageDiv = document.getElementById('detectedLanguage');
+        const langButtons = document.querySelectorAll('.lang-btn');
+
+        // Настройки языков
+        const languageSettings = {
+            'en': {
+                name: 'English',
+                flag: '🇬🇧',
+                code: 'en-US',
+                recognitionCode: 'en-US',
+                words: ['the', 'is', 'are', 'was', 'were', 'and', 'but', 'or', 'this', 'that']
+            },
+            'ru': {
+                name: 'Russian',
+                flag: '🇷🇺',
+                code: 'ru-RU',
+                recognitionCode: 'ru-RU',
+                words: ['привет', 'как', 'дела', 'что', 'это', 'да', 'нет', 'хорошо', 'спасибо']
+            },
+            'de': {
+                name: 'German',
+                flag: '🇩🇪',
+                code: 'de-DE',
+                recognitionCode: 'de-DE',
+                words: ['hallo', 'wie', 'geht', 'was', 'ist', 'ja', 'nein', 'gut', 'danke']
+            },
+            'uk': {
+                name: 'Ukrainian',
+                flag: '🇺🇦',
+                code: 'uk-UA',
+                recognitionCode: 'uk-UA',
+                words: ['привіт', 'як', 'справи', 'що', 'це', 'так', 'ні', 'добре', 'дякую']
+            }
+        };
 
         // Проверка поддержки Web Speech API
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            showError('Your browser does not support speech recognition. Please use Chrome, Edge, or Safari.');
+            showError('Ваш браузер не поддерживает распознавание речи. Пожалуйста, используйте Chrome или Edge.');
         } else {
             checkMicrophoneAccess();
         }
@@ -379,26 +497,15 @@
         // Проверка доступа к микрофону
         async function checkMicrophoneAccess() {
             try {
-                // Запрашиваем доступ к микрофону
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
-                // Останавливаем stream после получения доступа
                 stream.getTracks().forEach(track => track.stop());
-                
                 microphoneAccess = true;
                 initializeSpeechRecognition();
-                updateStatus('Click to start', 'ready');
+                updateStatus('Готов к работе', 'ready');
             } catch (error) {
                 console.error('Microphone access error:', error);
                 microphoneAccess = false;
-                
-                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                    showError('Microphone access denied. Please allow microphone access in your browser settings and reload the page.');
-                } else if (error.name === 'NotFoundError') {
-                    showError('No microphone found. Please connect a microphone and reload the page.');
-                } else {
-                    showError('Unable to access microphone: ' + error.message);
-                }
+                showError('Доступ к микрофону запрещен. Пожалуйста, разрешите доступ и обновите страницу.');
             }
         }
 
@@ -407,36 +514,49 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SpeechRecognition();
             
-            recognition.continuous = false; // Изменено на false для более надежной работы
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
+            // Настраиваем распознавание для всех языков пары
+            updateRecognitionLanguages();
             
-            // Устанавливаем язык по умолчанию - английский, но распознает многие языки
-            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 3; // Получаем несколько вариантов для лучшего определения
             
             recognition.onstart = () => {
-                console.log('Recognition started');
-                updateStatus('Listening...', 'listening');
+                console.log('Распознавание начато');
+                updateStatus('Слушаю...', 'listening');
             };
 
             recognition.onresult = async (event) => {
-                console.log('Recognition result received');
+                console.log('Получен результат распознавания');
+                
+                // Получаем лучший вариант
                 const result = event.results[0];
                 const transcript = result[0].transcript;
+                const confidence = result[0].confidence;
                 
-                console.log('Transcript:', transcript);
+                console.log('Распознано:', transcript, 'Точность:', confidence);
                 
-                if (transcript.trim().length > 0) {
-                    updateStatus('Detecting language...', 'recognizing');
+                if (transcript.trim().length > 0 && confidence > 0.3) {
+                    updateStatus('Определяю язык...', 'recognizing');
                     await processTranscript(transcript);
                     
-                    // Автоматически перезапускаем если все еще в режиме прослушивания
                     if (isListening) {
                         setTimeout(() => {
                             try {
                                 recognition.start();
                             } catch (e) {
-                                console.log('Recognition restart skipped:', e.message);
+                                console.log('Перезапуск распознавания пропущен:', e.message);
+                            }
+                        }, 100);
+                    }
+                } else {
+                    console.log('Слишком низкая точность или пустой текст');
+                    if (isListening) {
+                        setTimeout(() => {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                console.log('Перезапуск распознавания пропущен:', e.message);
                             }
                         }, 100);
                     }
@@ -444,390 +564,308 @@
             };
 
             recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
+                console.error('Ошибка распознавания речи:', event.error);
                 
                 if (event.error === 'no-speech') {
-                    updateStatus('No speech detected, listening...', 'listening');
-                    // Перезапускаем если нет речи
+                    console.log('Речь не обнаружена, продолжаю слушать...');
                     if (isListening) {
                         setTimeout(() => {
                             try {
                                 recognition.start();
                             } catch (e) {
-                                console.log('Recognition restart skipped:', e.message);
+                                console.log('Перезапуск распознавания пропущен:', e.message);
                             }
                         }, 100);
                     }
                 } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                    showError('Microphone access denied. Please allow microphone access and try again.');
+                    showError('Доступ к микрофону запрещен.');
                     stopListening();
                 } else if (event.error === 'network') {
-                    showError('Network error in speech recognition. Check your connection.');
-                    if (isListening) {
-                        setTimeout(() => {
-                            try {
-                                recognition.start();
-                            } catch (e) {
-                                console.log('Recognition restart skipped:', e.message);
-                            }
-                        }, 1000);
-                    }
-                } else if (event.error === 'aborted') {
-                    // Игнорируем aborted ошибки
-                    console.log('Recognition aborted, will restart');
-                } else {
-                    console.error(`Recognition error: ${event.error}`);
-                    if (isListening) {
-                        setTimeout(() => {
-                            try {
-                                recognition.start();
-                            } catch (e) {
-                                console.log('Recognition restart skipped:', e.message);
-                            }
-                        }, 1000);
-                    }
+                    showError('Ошибка сети. Проверьте подключение.');
+                }
+                
+                if (isListening && event.error !== 'aborted') {
+                    setTimeout(() => {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log('Перезапуск распознавания пропущен:', e.message);
+                        }
+                    }, 1000);
                 }
             };
 
             recognition.onend = () => {
-                console.log('Recognition ended');
+                console.log('Распознавание завершено');
                 if (isListening) {
                     setTimeout(() => {
                         try {
                             recognition.start();
-                            console.log('Recognition restarted');
                         } catch (error) {
-                            console.error('Error restarting recognition:', error);
+                            console.error('Ошибка перезапуска распознавания:', error);
                         }
                     }, 100);
                 }
             };
         }
 
-        // Определение языка текста на основе выбранной пары
-        function detectLanguage(text) {
-            console.log('Detecting language for:', text);
+        // Обновление языков распознавания
+        function updateRecognitionLanguages() {
+            if (!recognition) return;
             
-            const { lang1, lang2 } = selectedLangPair;
-            console.log('Selected pair:', lang1, '-', lang2);
+            const lang1 = languageSettings[selectedLangPair.lang1];
+            const lang2 = languageSettings[selectedLangPair.lang2];
             
-            // Характерные буквы
-            const ukrainianUniqueChars = /[іїєґ]/i;
-            const russianUniqueChars = /[ыэъё]/i;
-            const germanUniqueChars = /[äöüß]/i;
+            // Устанавливаем оба языка для распознавания
+            recognitionLanguages = [lang1.recognitionCode, lang2.recognitionCode];
             
-            // Кириллица и латиница
-            const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-            const hasLatin = /[a-zA-Z]/.test(text);
+            // Chrome поддерживает несколько языков через запятую
+            recognition.lang = `${lang1.recognitionCode}, ${lang2.recognitionCode}`;
             
-            console.log('Has Cyrillic:', hasCyrillic, 'Has Latin:', hasLatin);
-            
-            // === УКРАИНСКИЙ ===
-            if (ukrainianUniqueChars.test(text)) {
-                console.log('Detected Ukrainian (unique chars)');
-                return 'uk';
-            }
-            
-            // === РУССКИЙ ===
-            if (russianUniqueChars.test(text)) {
-                console.log('Detected Russian (unique chars)');
-                return 'ru';
-            }
-            
-            // === НЕМЕЦКИЙ ===
-            if (germanUniqueChars.test(text)) {
-                console.log('Detected German (unique chars)');
-                return 'de';
-            }
-            
-            // Если есть кириллица, но нет уникальных букв
-            if (hasCyrillic) {
-                // Проверяем частотные буквы
-                const yCount = (text.match(/ы/gi) || []).length;
-                const iCount = (text.match(/і/gi) || []).length;
-                
-                if (iCount > 0) {
-                    console.log('Detected Ukrainian (і letter)');
-                    return 'uk';
-                }
-                if (yCount > 0) {
-                    console.log('Detected Russian (ы letter)');
-                    return 'ru';
-                }
-                
-                // Проверяем частотные слова
-                const russianWords = /\b(что|это|как|был|была|были|где|когда|почему|потому|очень|всё|все|или|да|нет|может|могу|хорошо|плохо|спасибо)\b/i;
-                const ukrainianWords = /\b(що|це|як|був|була|були|де|коли|чому|тому|дуже|все|усе|чи|так|ні|може|можу|добре|погано|дякую)\b/i;
-                
-                if (russianWords.test(text)) {
-                    console.log('Detected Russian (common words)');
-                    return 'ru';
-                }
-                if (ukrainianWords.test(text)) {
-                    console.log('Detected Ukrainian (common words)');
-                    return 'uk';
-                }
-                
-                // Если в паре есть RU или UK, выбираем соответствующий
-                if (lang1 === 'ru' || lang2 === 'ru') {
-                    console.log('Default to Russian (in pair)');
-                    return 'ru';
-                }
-                if (lang1 === 'uk' || lang2 === 'uk') {
-                    console.log('Default to Ukrainian (in pair)');
-                    return 'uk';
-                }
-            }
-            
-            // Если есть латиница
-            if (hasLatin) {
-                // Немецкие частотные слова
-                const germanWords = /\b(der|die|das|und|ist|sind|war|waren|ein|eine|nicht|mit|von|zu|auf|für|als|auch|aber|wenn|wie|nur|noch|mehr|sehr|gut|kann|soll|muss|ich|du|er|sie|wir|ihr)\b/i;
-                // Английские частотные слова
-                const englishWords = /\b(the|is|are|was|were|be|been|have|has|had|do|does|did|will|would|can|could|should|may|might|must|this|that|these|those|what|which|who|when|where|why|how|all|some|any|very|good|bad|yes|no|not|and|or|but|if|then|than|more|most|much|many|well)\b/i;
-                
-                if (germanWords.test(text)) {
-                    console.log('Detected German (common words)');
-                    return 'de';
-                }
-                if (englishWords.test(text)) {
-                    console.log('Detected English (common words)');
-                    return 'en';
-                }
-                
-                // По умолчанию для латиницы
-                if (lang1 === 'de' || lang2 === 'de') {
-                    console.log('Default to German (in pair)');
-                    return 'de';
-                }
-                if (lang1 === 'en' || lang2 === 'en') {
-                    console.log('Default to English (in pair)');
-                    return 'en';
-                }
-            }
-            
-            // Если ничего не определено, возвращаем первый язык пары
-            console.log('Default to lang1:', lang1);
-            return lang1;
+            console.log('Языки распознавания установлены:', recognition.lang);
         }
 
-        // Определение целевого языка для перевода
+        // Улучшенное определение языка
+        function detectLanguage(text) {
+            console.log('Определяю язык для:', text);
+            
+            const textLower = text.toLowerCase();
+            let scores = {
+                'en': 0,
+                'ru': 0,
+                'de': 0,
+                'uk': 0
+            };
+            
+            // Проверка уникальных символов
+            if (/[äöüß]/i.test(text)) scores.de += 3;
+            if (/[іїєґ]/i.test(text)) scores.uk += 3;
+            if (/[ыэъё]/i.test(text)) scores.ru += 3;
+            
+            // Проверка алфавита
+            const cyrillicCount = (text.match(/[а-яА-ЯёЁ]/g) || []).length;
+            const latinCount = (text.match(/[a-zA-Z]/g) || []).length;
+            
+            if (cyrillicCount > latinCount) {
+                scores.ru += 2;
+                scores.uk += 2;
+                scores.en -= 1;
+                scores.de -= 1;
+            } else if (latinCount > cyrillicCount) {
+                scores.en += 2;
+                scores.de += 2;
+                scores.ru -= 1;
+                scores.uk -= 1;
+            }
+            
+            // Проверка частотных слов для каждого языка
+            Object.keys(scores).forEach(lang => {
+                languageSettings[lang].words.forEach(word => {
+                    if (textLower.includes(word.toLowerCase())) {
+                        scores[lang] += 1;
+                    }
+                });
+            });
+            
+            // Дополнительные проверки
+            if (/[a-z][а-я]|[а-я][a-z]/i.test(text)) {
+                // Смешанный текст - снижаем баллы
+                Object.keys(scores).forEach(lang => scores[lang] -= 1);
+            }
+            
+            // Находим язык с максимальным счетом
+            let detectedLang = null;
+            let maxScore = -Infinity;
+            
+            Object.keys(scores).forEach(lang => {
+                if (scores[lang] > maxScore) {
+                    maxScore = scores[lang];
+                    detectedLang = lang;
+                }
+            });
+            
+            // Если язык определился как один из пары, возвращаем его
+            if (detectedLang === selectedLangPair.lang1 || detectedLang === selectedLangPair.lang2) {
+                console.log('Определен язык пары:', detectedLang, 'счет:', maxScore);
+                lastDetectedLang = detectedLang;
+                updateDetectedLanguageDisplay(detectedLang);
+                return detectedLang;
+            }
+            
+            // Если язык не из пары, выбираем по умолчанию первый язык пары
+            console.log('Язык не из пары. Использую:', selectedLangPair.lang1);
+            lastDetectedLang = selectedLangPair.lang1;
+            updateDetectedLanguageDisplay(selectedLangPair.lang1);
+            return selectedLangPair.lang1;
+        }
+
+        // Обновление отображения определенного языка
+        function updateDetectedLanguageDisplay(lang) {
+            const langInfo = languageSettings[lang];
+            detectedLanguageDiv.innerHTML = `
+                <span>🎯 Определен: ${langInfo.flag} ${langInfo.name}</span>
+                <small style="opacity:0.7"> (${lastDetectedLang === selectedLangPair.lang1 ? '↳ Перевод на ' + languageSettings[selectedLangPair.lang2].name : '↳ Перевод на ' + languageSettings[selectedLangPair.lang1].name})</small>
+            `;
+        }
+
+        // Определение целевого языка
         function getTargetLanguage(sourceLang) {
-            const { lang1, lang2 } = selectedLangPair;
-            const target = sourceLang === lang1 ? lang2 : lang1;
-            console.log('Target language:', target);
-            return target;
+            return sourceLang === selectedLangPair.lang1 ? selectedLangPair.lang2 : selectedLangPair.lang1;
         }
 
         // Обработка распознанного текста
         async function processTranscript(transcript) {
-            console.log('=== PROCESSING TRANSCRIPT ===');
-            console.log('Raw transcript:', transcript);
-            
-            // Очистка текста
             const cleanedText = transcript.trim();
-            if (cleanedText.length === 0) {
-                console.log('Empty transcript, skipping');
-                return;
-            }
-            
-            console.log('Cleaned text:', cleanedText);
+            if (cleanedText.length === 0) return;
             
             try {
                 const sourceLang = detectLanguage(cleanedText);
                 const targetLang = getTargetLanguage(sourceLang);
                 
-                console.log(`Language detected: ${sourceLang} → ${targetLang}`);
+                console.log(`Перевод: ${sourceLang} → ${targetLang}`);
                 
-                // Проверяем что языки разные
-                if (sourceLang === targetLang) {
-                    console.error('Source and target languages are the same!');
-                    showError('Cannot detect language properly. Please speak more clearly.');
-                    return;
-                }
-                
-                updateStatus('Translating...', 'translating');
+                updateStatus('Перевожу...', 'translating');
                 
                 const translation = await translateText(cleanedText, sourceLang, targetLang);
                 
-                console.log('Translation result:', translation);
-                
-                // Проверяем что перевод не пустой и отличается от оригинала
                 if (!translation || translation.trim().length === 0) {
-                    throw new Error('Empty translation received');
+                    throw new Error('Пустой перевод');
                 }
                 
                 displayTranslation(translation, cleanedText, sourceLang, targetLang);
                 addToHistory(translation, cleanedText, sourceLang, targetLang);
                 
-                updateStatus('Ready! Listening...', 'ready');
+                updateStatus('Готово! Слушаю...', 'ready');
                 
-                // Небольшая пауза перед следующим распознаванием
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Оптимизация: если язык определился правильно, можно переключить приоритет распознавания
+                if (lastDetectedLang && recognition) {
+                    const langInfo = languageSettings[lastDetectedLang];
+                    recognition.lang = `${langInfo.recognitionCode}, ${languageSettings[getTargetLanguage(lastDetectedLang)].recognitionCode}`;
+                }
                 
             } catch (error) {
-                console.error('Translation error:', error);
-                showError('Translation failed: ' + error.message);
-                updateStatus('Error - Listening...', 'ready');
+                console.error('Ошибка перевода:', error);
+                showError('Ошибка перевода: ' + error.message);
+                updateStatus('Ошибка - продолжаю слушать...', 'ready');
             }
         }
 
-        // Перевод текста с использованием нескольких сервисов
+        // Улучшенный перевод текста
         async function translateText(text, source, target) {
-            console.log(`=== TRANSLATION REQUEST ===`);
-            console.log(`Text: "${text}"`);
-            console.log(`From: ${source} → To: ${target}`);
+            console.log(`Перевод: "${text}" с ${source} на ${target}`);
             
-            // Проверяем что языки разные
-            if (source === target) {
-                console.log('Source and target are the same, returning original');
-                return text;
-            }
+            if (source === target) return text;
             
-            // Метод 1: MyMemory API (самый надежный, бесплатный)
-            try {
-                console.log('Trying MyMemory API...');
-                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
-                console.log('URL:', url);
-                
-                const response = await fetch(url);
-                console.log('MyMemory response status:', response.status);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('MyMemory data:', data);
-                    
-                    if (data.responseData && data.responseData.translatedText) {
-                        const translation = data.responseData.translatedText;
-                        console.log('✓ MyMemory SUCCESS:', translation);
-                        
-                        // Проверяем что перевод не является ошибкой
-                        if (!translation.includes('MYMEMORY WARNING') && 
-                            translation !== text &&
-                            translation.length > 0) {
-                            return translation;
-                        }
+            // Список API в порядке приоритета
+            const translationServices = [
+                {
+                    name: 'LibreTranslate 1',
+                    url: 'https://libretranslate.com/translate',
+                    method: 'POST',
+                    body: {
+                        q: text,
+                        source: source,
+                        target: target,
+                        format: 'text'
                     }
-                }
-            } catch (error) {
-                console.error('MyMemory API error:', error);
-            }
-            
-            // Метод 2: Lingva Translate API
-            try {
-                console.log('Trying Lingva Translate...');
-                const url = `https://lingva.ml/api/v1/${source}/${target}/${encodeURIComponent(text)}`;
-                console.log('URL:', url);
-                
-                const response = await fetch(url);
-                console.log('Lingva response status:', response.status);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Lingva data:', data);
-                    
-                    if (data.translation && data.translation.length > 0) {
-                        console.log('✓ Lingva SUCCESS:', data.translation);
-                        return data.translation;
+                },
+                {
+                    name: 'LibreTranslate 2',
+                    url: 'https://translate.terraprint.co/translate',
+                    method: 'POST',
+                    body: {
+                        q: text,
+                        source: source,
+                        target: target,
+                        format: 'text'
                     }
+                },
+                {
+                    name: 'MyMemory',
+                    url: `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`,
+                    method: 'GET'
                 }
-            } catch (error) {
-                console.error('Lingva API error:', error);
-            }
-            
-            // Метод 3: LibreTranslate
-            const libreApis = [
-                'https://libretranslate.com/translate',
-                'https://translate.terraprint.co/translate'
             ];
             
-            for (const apiUrl of libreApis) {
+            for (const service of translationServices) {
                 try {
-                    console.log(`Trying ${apiUrl}...`);
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            q: text,
-                            source: source,
-                            target: target,
-                            format: 'text'
-                        })
-                    });
-
-                    console.log(`${apiUrl} response status:`, response.status);
-
+                    console.log(`Пробую ${service.name}...`);
+                    
+                    const options = {
+                        method: service.method,
+                        headers: { 'Content-Type': 'application/json' }
+                    };
+                    
+                    if (service.method === 'POST') {
+                        options.body = JSON.stringify(service.body);
+                    }
+                    
+                    const response = await fetch(service.url, options);
+                    
                     if (response.ok) {
                         const data = await response.json();
-                        console.log(`${apiUrl} data:`, data);
                         
-                        if (data.translatedText && data.translatedText.length > 0) {
-                            console.log(`✓ LibreTranslate SUCCESS:`, data.translatedText);
-                            return data.translatedText;
+                        if (service.name === 'MyMemory') {
+                            if (data.responseData && data.responseData.translatedText) {
+                                const translation = data.responseData.translatedText;
+                                if (translation && !translation.includes('MYMEMORY WARNING')) {
+                                    console.log(`✓ ${service.name} успешно:`, translation);
+                                    return translation;
+                                }
+                            }
+                        } else {
+                            if (data.translatedText) {
+                                console.log(`✓ ${service.name} успешно:`, data.translatedText);
+                                return data.translatedText;
+                            }
                         }
                     }
                 } catch (error) {
-                    console.error(`Error with ${apiUrl}:`, error);
+                    console.error(`Ошибка ${service.name}:`, error);
                 }
             }
             
-            // Если все методы не сработали
-            console.error('All translation services failed');
-            throw new Error('All translation services are unavailable');
+            throw new Error('Все сервисы перевода недоступны');
         }
 
-        // Отображение перевода в формате диалога
+        // Отображение перевода
         function displayTranslation(translation, original, sourceLang, targetLang) {
-            const langNames = {
-                'en': 'EN',
-                'ru': 'RU',
-                'de': 'DE',
-                'uk': 'UK'
-            };
+            const sourceInfo = languageSettings[sourceLang];
+            const targetInfo = languageSettings[targetLang];
             
             const item = document.createElement('div');
             item.className = `conversation-item lang-${sourceLang}`;
             
-            const time = new Date().toLocaleTimeString('en-US', {
+            const time = new Date().toLocaleTimeString('ru-RU', {
                 hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
+                minute: '2-digit'
             });
             
             item.innerHTML = `
                 <div class="time">
-                    <span class="lang-badge">${langNames[sourceLang]}</span>
+                    <span class="lang-badge">${sourceInfo.flag} ${sourceInfo.name}</span>
                     ${time}
                 </div>
                 <div class="original">${original}</div>
-                <div class="arrow">↓ ${langNames[targetLang]}</div>
+                <div class="arrow">↓ ${targetInfo.flag} ${targetInfo.name}</div>
                 <div class="translation">${translation}</div>
             `;
             
             conversationList.appendChild(item);
             conversationContainer.classList.add('visible');
-            
-            // Прокрутка к последнему элементу
             conversationContainer.scrollTop = conversationContainer.scrollHeight;
-            
             errorDiv.classList.remove('visible');
         }
 
         // Добавление в историю
         function addToHistory(translation, original, sourceLang, targetLang) {
-            const item = {
+            conversationHistory.push({
                 translation,
                 original,
                 sourceLang,
                 targetLang,
                 timestamp: new Date()
-            };
-            
-            conversationHistory.push(item);
-            
-            // Сохраняем в localStorage
+            });
             saveConversation();
         }
 
@@ -854,53 +892,83 @@
 
         function startListening() {
             if (!microphoneAccess) {
-                showError('Microphone access is required. Please reload the page and allow access.');
+                showError('Требуется доступ к микрофону.');
                 return;
             }
             
             if (!recognition) {
-                showError('Speech recognition is not available');
+                showError('Распознавание речи недоступно');
                 return;
             }
             
             try {
-                // Устанавливаем язык распознавания (можно менять динамически)
-                recognition.lang = 'en-US';
                 recognition.start();
                 isListening = true;
                 micButton.classList.add('active');
                 errorDiv.classList.remove('visible');
+                updateStatus('Слушаю...', 'listening');
             } catch (error) {
-                console.error('Error starting recognition:', error);
-                showError('Failed to start speech recognition. Please try again.');
+                console.error('Ошибка запуска распознавания:', error);
+                showError('Не удалось запустить распознавание речи.');
             }
         }
 
         function stopListening() {
             if (recognition) {
-                recognition.stop();
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    console.log('Уже остановлено');
+                }
             }
             isListening = false;
             micButton.classList.remove('active');
-            updateStatus('Click to start', 'ready');
+            updateStatus('Нажмите микрофон для начала', 'ready');
+        }
+
+        // Обновление отображения языковой пары
+        function updateLangPairDisplay() {
+            const lang1Info = languageSettings[selectedLangPair.lang1];
+            const lang2Info = languageSettings[selectedLangPair.lang2];
+            
+            lang1Display.textContent = `${lang1Info.flag} ${lang1Info.name}`;
+            lang2Display.textContent = `${lang2Info.flag} ${lang2Info.name}`;
+            
+            // Обновляем распознавание
+            if (recognition) {
+                updateRecognitionLanguages();
+            }
+            
+            // Сбрасываем определенный язык
+            lastDetectedLang = null;
+            detectedLanguageDiv.innerHTML = `<span>🎯 Детектор языка: Автоматический</span>`;
+            
+            console.log('Языковая пара изменена на:', selectedLangPair);
         }
 
         // Обработчики событий
         micButton.addEventListener('click', toggleListening);
 
-        // Обработчик изменения языковой пары
-        langPairSelect.addEventListener('change', (e) => {
-            const [lang1, lang2] = e.target.value.split('-');
-            selectedLangPair = { lang1, lang2 };
-            console.log('Language pair changed to:', selectedLangPair);
-            
-            // Очищаем ошибки при смене языка
-            errorDiv.classList.remove('visible');
+        // Обработчики кнопок выбора языка
+        langButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const lang1 = button.getAttribute('data-lang1');
+                const lang2 = button.getAttribute('data-lang2');
+                
+                selectedLangPair = { lang1, lang2 };
+                
+                // Обновляем активную кнопку
+                langButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                updateLangPairDisplay();
+                saveConversation();
+            });
         });
 
         // Кнопка очистки разговора
         clearConversationBtn.addEventListener('click', () => {
-            if (confirm('Clear entire conversation?')) {
+            if (confirm('Очистить весь диалог?')) {
                 conversationList.innerHTML = '';
                 conversationHistory = [];
                 conversationContainer.classList.remove('visible');
@@ -909,18 +977,28 @@
             }
         });
 
-        // Загрузка истории из localStorage
+        // Загрузка истории
         window.addEventListener('load', () => {
-            // Загружаем выбранную языковую пару
+            const saved = localStorage.getItem('conversationHistory');
             const savedLangPair = localStorage.getItem('selectedLangPair');
+            
             if (savedLangPair) {
                 const [lang1, lang2] = savedLangPair.split('-');
                 selectedLangPair = { lang1, lang2 };
-                langPairSelect.value = savedLangPair;
+                
+                // Активируем соответствующую кнопку
+                langButtons.forEach(btn => {
+                    if (btn.getAttribute('data-lang1') === lang1 && 
+                        btn.getAttribute('data-lang2') === lang2) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                
+                updateLangPairDisplay();
             }
             
-            // Загружаем историю разговора
-            const saved = localStorage.getItem('conversationHistory');
             if (saved) {
                 try {
                     conversationHistory = JSON.parse(saved).map(item => ({
@@ -928,31 +1006,25 @@
                         timestamp: new Date(item.timestamp)
                     }));
                     
-                    // Восстанавливаем отображение
                     conversationHistory.forEach(item => {
-                        const langNames = {
-                            'en': 'EN',
-                            'ru': 'RU',
-                            'de': 'DE',
-                            'uk': 'UK'
-                        };
+                        const sourceInfo = languageSettings[item.sourceLang];
+                        const targetInfo = languageSettings[item.targetLang];
                         
                         const div = document.createElement('div');
                         div.className = `conversation-item lang-${item.sourceLang}`;
                         
-                        const time = item.timestamp.toLocaleTimeString('en-US', {
+                        const time = item.timestamp.toLocaleTimeString('ru-RU', {
                             hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
+                            minute: '2-digit'
                         });
                         
                         div.innerHTML = `
                             <div class="time">
-                                <span class="lang-badge">${langNames[item.sourceLang]}</span>
+                                <span class="lang-badge">${sourceInfo.flag} ${sourceInfo.name}</span>
                                 ${time}
                             </div>
                             <div class="original">${item.original}</div>
-                            <div class="arrow">↓ ${langNames[item.targetLang]}</div>
+                            <div class="arrow">↓ ${targetInfo.flag} ${targetInfo.name}</div>
                             <div class="translation">${item.translation}</div>
                         `;
                         
@@ -963,21 +1035,18 @@
                         conversationContainer.classList.add('visible');
                     }
                 } catch (error) {
-                    console.error('Error loading history:', error);
+                    console.error('Ошибка загрузки истории:', error);
                 }
             }
         });
 
-        // Сохранение истории в localStorage
+        // Сохранение истории
         function saveConversation() {
             localStorage.setItem('conversationHistory', JSON.stringify(conversationHistory));
             localStorage.setItem('selectedLangPair', `${selectedLangPair.lang1}-${selectedLangPair.lang2}`);
         }
 
-        // Сохранение при закрытии
-        window.addEventListener('beforeunload', () => {
-            saveConversation();
-        });
+        window.addEventListener('beforeunload', saveConversation);
     </script>
 </body>
 </html>
