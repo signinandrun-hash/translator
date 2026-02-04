@@ -325,12 +325,10 @@
             <p>Real-time Speech Translation</p>
             <div class="language-selector">
                 <select id="langPairSelect">
-                    <option value="en-ru">English ⇄ Russian</option>
-                    <option value="de-uk">German ⇄ Ukrainian</option>
-                    <option value="en-de">English ⇄ German</option>
-                    <option value="en-uk">English ⇄ Ukrainian</option>
-                    <option value="ru-de">Russian ⇄ German</option>
-                    <option value="ru-uk">Russian ⇄ Ukrainian</option>
+                    <option value="ru-de">🇷🇺 Russian ⇄ 🇩🇪 German</option>
+                    <option value="uk-de">🇺🇦 Ukrainian ⇄ 🇩🇪 German</option>
+                    <option value="ru-en">🇷🇺 Russian ⇄ 🇬🇧 English</option>
+                    <option value="uk-en">🇺🇦 Ukrainian ⇄ 🇬🇧 English</option>
                 </select>
             </div>
         </div>
@@ -360,7 +358,7 @@
         let isListening = false;
         let conversationHistory = [];
         let microphoneAccess = false;
-        let selectedLangPair = { lang1: 'en', lang2: 'ru' }; // По умолчанию EN-RU
+        let selectedLangPair = { lang1: 'ru', lang2: 'de' }; // По умолчанию RU-DE
 
         // Элементы DOM
         const micButton = document.getElementById('micButton');
@@ -508,80 +506,159 @@
 
         // Определение языка текста на основе выбранной пары
         function detectLanguage(text) {
-            const textLower = text.toLowerCase();
-            
-            // Характерные буквы для каждого языка
-            const ukrainianChars = /[іїєґ]/i;
-            const russianChars = /[ыъэё]/i;
-            const germanChars = /[äöüß]/i;
-            
-            // Проверяем наличие кириллицы
-            const hasCyrillic = /[а-яА-ЯіїєґыъэёІЇЄҐЫЪЭЁ]/.test(text);
-            const hasLatin = /[a-zA-Z]/.test(text);
+            console.log('Detecting language for:', text);
             
             const { lang1, lang2 } = selectedLangPair;
+            console.log('Selected pair:', lang1, '-', lang2);
             
-            // Если оба языка кириллические
-            if ((lang1 === 'ru' || lang1 === 'uk') && (lang2 === 'ru' || lang2 === 'uk')) {
-                if (ukrainianChars.test(text)) return 'uk';
-                if (russianChars.test(text)) return 'ru';
-                return hasCyrillic ? lang1 : lang2;
+            // Характерные буквы
+            const ukrainianUniqueChars = /[іїєґ]/i;
+            const russianUniqueChars = /[ыэъё]/i;
+            const germanUniqueChars = /[äöüß]/i;
+            
+            // Кириллица и латиница
+            const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
+            const hasLatin = /[a-zA-Z]/.test(text);
+            
+            console.log('Has Cyrillic:', hasCyrillic, 'Has Latin:', hasLatin);
+            
+            // === УКРАИНСКИЙ ===
+            if (ukrainianUniqueChars.test(text)) {
+                console.log('Detected Ukrainian (unique chars)');
+                return 'uk';
             }
             
-            // Если оба языка латинские
-            if ((lang1 === 'en' || lang1 === 'de') && (lang2 === 'en' || lang2 === 'de')) {
-                if (germanChars.test(text)) return 'de';
-                const germanWords = /\b(der|die|das|und|ist|von|den|dem|ein|eine|nicht|mit|sich|auf|für|als|auch|sie|ich|wir)\b/i;
-                const englishWords = /\b(the|is|are|was|were|have|has|had|will|would|can|could|should|this|that|these|those|and|or|but)\b/i;
-                if (germanWords.test(text)) return 'de';
-                if (englishWords.test(text)) return 'en';
-                return hasLatin ? lang1 : lang2;
+            // === РУССКИЙ ===
+            if (russianUniqueChars.test(text)) {
+                console.log('Detected Russian (unique chars)');
+                return 'ru';
             }
             
-            // Смешанные пары (кириллица + латиница)
-            // Украинский
-            if (ukrainianChars.test(text)) return 'uk';
-            // Русский
-            if (russianChars.test(text)) return 'ru';
-            // Немецкий
-            if (germanChars.test(text)) return 'de';
-            
-            // По основному алфавиту
-            if (hasCyrillic && !hasLatin) {
-                return (lang1 === 'ru' || lang1 === 'uk') ? lang1 : lang2;
-            }
-            if (hasLatin && !hasCyrillic) {
-                return (lang1 === 'en' || lang1 === 'de') ? lang1 : lang2;
+            // === НЕМЕЦКИЙ ===
+            if (germanUniqueChars.test(text)) {
+                console.log('Detected German (unique chars)');
+                return 'de';
             }
             
-            // По умолчанию первый язык
+            // Если есть кириллица, но нет уникальных букв
+            if (hasCyrillic) {
+                // Проверяем частотные буквы
+                const yCount = (text.match(/ы/gi) || []).length;
+                const iCount = (text.match(/і/gi) || []).length;
+                
+                if (iCount > 0) {
+                    console.log('Detected Ukrainian (і letter)');
+                    return 'uk';
+                }
+                if (yCount > 0) {
+                    console.log('Detected Russian (ы letter)');
+                    return 'ru';
+                }
+                
+                // Проверяем частотные слова
+                const russianWords = /\b(что|это|как|был|была|были|где|когда|почему|потому|очень|всё|все|или|да|нет|может|могу|хорошо|плохо|спасибо)\b/i;
+                const ukrainianWords = /\b(що|це|як|був|була|були|де|коли|чому|тому|дуже|все|усе|чи|так|ні|може|можу|добре|погано|дякую)\b/i;
+                
+                if (russianWords.test(text)) {
+                    console.log('Detected Russian (common words)');
+                    return 'ru';
+                }
+                if (ukrainianWords.test(text)) {
+                    console.log('Detected Ukrainian (common words)');
+                    return 'uk';
+                }
+                
+                // Если в паре есть RU или UK, выбираем соответствующий
+                if (lang1 === 'ru' || lang2 === 'ru') {
+                    console.log('Default to Russian (in pair)');
+                    return 'ru';
+                }
+                if (lang1 === 'uk' || lang2 === 'uk') {
+                    console.log('Default to Ukrainian (in pair)');
+                    return 'uk';
+                }
+            }
+            
+            // Если есть латиница
+            if (hasLatin) {
+                // Немецкие частотные слова
+                const germanWords = /\b(der|die|das|und|ist|sind|war|waren|ein|eine|nicht|mit|von|zu|auf|für|als|auch|aber|wenn|wie|nur|noch|mehr|sehr|gut|kann|soll|muss|ich|du|er|sie|wir|ihr)\b/i;
+                // Английские частотные слова
+                const englishWords = /\b(the|is|are|was|were|be|been|have|has|had|do|does|did|will|would|can|could|should|may|might|must|this|that|these|those|what|which|who|when|where|why|how|all|some|any|very|good|bad|yes|no|not|and|or|but|if|then|than|more|most|much|many|well)\b/i;
+                
+                if (germanWords.test(text)) {
+                    console.log('Detected German (common words)');
+                    return 'de';
+                }
+                if (englishWords.test(text)) {
+                    console.log('Detected English (common words)');
+                    return 'en';
+                }
+                
+                // По умолчанию для латиницы
+                if (lang1 === 'de' || lang2 === 'de') {
+                    console.log('Default to German (in pair)');
+                    return 'de';
+                }
+                if (lang1 === 'en' || lang2 === 'en') {
+                    console.log('Default to English (in pair)');
+                    return 'en';
+                }
+            }
+            
+            // Если ничего не определено, возвращаем первый язык пары
+            console.log('Default to lang1:', lang1);
             return lang1;
         }
 
         // Определение целевого языка для перевода
         function getTargetLanguage(sourceLang) {
             const { lang1, lang2 } = selectedLangPair;
-            return sourceLang === lang1 ? lang2 : lang1;
+            const target = sourceLang === lang1 ? lang2 : lang1;
+            console.log('Target language:', target);
+            return target;
         }
 
         // Обработка распознанного текста
         async function processTranscript(transcript) {
-            console.log('Processing transcript:', transcript);
+            console.log('=== PROCESSING TRANSCRIPT ===');
+            console.log('Raw transcript:', transcript);
+            
+            // Очистка текста
+            const cleanedText = transcript.trim();
+            if (cleanedText.length === 0) {
+                console.log('Empty transcript, skipping');
+                return;
+            }
+            
+            console.log('Cleaned text:', cleanedText);
             
             try {
-                const sourceLang = detectLanguage(transcript);
+                const sourceLang = detectLanguage(cleanedText);
                 const targetLang = getTargetLanguage(sourceLang);
                 
-                console.log(`Detected language: ${sourceLang}, target: ${targetLang}`);
+                console.log(`Language detected: ${sourceLang} → ${targetLang}`);
+                
+                // Проверяем что языки разные
+                if (sourceLang === targetLang) {
+                    console.error('Source and target languages are the same!');
+                    showError('Cannot detect language properly. Please speak more clearly.');
+                    return;
+                }
                 
                 updateStatus('Translating...', 'translating');
                 
-                const translation = await translateText(transcript, sourceLang, targetLang);
+                const translation = await translateText(cleanedText, sourceLang, targetLang);
                 
                 console.log('Translation result:', translation);
                 
-                displayTranslation(translation, transcript, sourceLang, targetLang);
-                addToHistory(translation, transcript, sourceLang, targetLang);
+                // Проверяем что перевод не пустой и отличается от оригинала
+                if (!translation || translation.trim().length === 0) {
+                    throw new Error('Empty translation received');
+                }
+                
+                displayTranslation(translation, cleanedText, sourceLang, targetLang);
+                addToHistory(translation, cleanedText, sourceLang, targetLang);
                 
                 updateStatus('Ready! Listening...', 'ready');
                 
@@ -590,37 +667,78 @@
                 
             } catch (error) {
                 console.error('Translation error:', error);
-                showError('Translation failed. The service might be temporarily unavailable. Please try again.');
-                updateStatus('Error - Click to retry', 'ready');
+                showError('Translation failed: ' + error.message);
+                updateStatus('Error - Listening...', 'ready');
             }
         }
 
         // Перевод текста с использованием нескольких сервисов
         async function translateText(text, source, target) {
-            console.log(`Translating from ${source} to ${target}: "${text}"`);
+            console.log(`=== TRANSLATION REQUEST ===`);
+            console.log(`Text: "${text}"`);
+            console.log(`From: ${source} → To: ${target}`);
             
-            // Метод 1: MyMemory API (бесплатный, без ограничений)
+            // Проверяем что языки разные
+            if (source === target) {
+                console.log('Source and target are the same, returning original');
+                return text;
+            }
+            
+            // Метод 1: MyMemory API (самый надежный, бесплатный)
             try {
-                const response = await fetch(
-                    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`
-                );
+                console.log('Trying MyMemory API...');
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
+                console.log('URL:', url);
+                
+                const response = await fetch(url);
+                console.log('MyMemory response status:', response.status);
                 
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('MyMemory data:', data);
+                    
                     if (data.responseData && data.responseData.translatedText) {
-                        console.log('Translation successful (MyMemory)');
-                        return data.responseData.translatedText;
+                        const translation = data.responseData.translatedText;
+                        console.log('✓ MyMemory SUCCESS:', translation);
+                        
+                        // Проверяем что перевод не является ошибкой
+                        if (!translation.includes('MYMEMORY WARNING') && 
+                            translation !== text &&
+                            translation.length > 0) {
+                            return translation;
+                        }
                     }
                 }
             } catch (error) {
                 console.error('MyMemory API error:', error);
             }
             
-            // Метод 2: LibreTranslate (несколько инстансов)
+            // Метод 2: Lingva Translate API
+            try {
+                console.log('Trying Lingva Translate...');
+                const url = `https://lingva.ml/api/v1/${source}/${target}/${encodeURIComponent(text)}`;
+                console.log('URL:', url);
+                
+                const response = await fetch(url);
+                console.log('Lingva response status:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Lingva data:', data);
+                    
+                    if (data.translation && data.translation.length > 0) {
+                        console.log('✓ Lingva SUCCESS:', data.translation);
+                        return data.translation;
+                    }
+                }
+            } catch (error) {
+                console.error('Lingva API error:', error);
+            }
+            
+            // Метод 3: LibreTranslate
             const libreApis = [
                 'https://libretranslate.com/translate',
-                'https://translate.terraprint.co/translate',
-                'https://libretranslate.de/translate'
+                'https://translate.terraprint.co/translate'
             ];
             
             for (const apiUrl of libreApis) {
@@ -639,10 +757,14 @@
                         })
                     });
 
+                    console.log(`${apiUrl} response status:`, response.status);
+
                     if (response.ok) {
                         const data = await response.json();
-                        if (data.translatedText) {
-                            console.log(`Translation successful (${apiUrl})`);
+                        console.log(`${apiUrl} data:`, data);
+                        
+                        if (data.translatedText && data.translatedText.length > 0) {
+                            console.log(`✓ LibreTranslate SUCCESS:`, data.translatedText);
                             return data.translatedText;
                         }
                     }
@@ -651,25 +773,8 @@
                 }
             }
             
-            // Метод 3: Lingva Translate API
-            try {
-                console.log('Trying Lingva Translate...');
-                const response = await fetch(
-                    `https://lingva.ml/api/v1/${source}/${target}/${encodeURIComponent(text)}`
-                );
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.translation) {
-                        console.log('Translation successful (Lingva)');
-                        return data.translation;
-                    }
-                }
-            } catch (error) {
-                console.error('Lingva API error:', error);
-            }
-            
             // Если все методы не сработали
+            console.error('All translation services failed');
             throw new Error('All translation services are unavailable');
         }
 
